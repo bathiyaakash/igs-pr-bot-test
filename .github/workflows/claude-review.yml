@@ -1,0 +1,78 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+      - develop
+
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write   # required for AWS OIDC authentication
+
+jobs:
+  review:
+    name: Review PR
+    runs-on: ubuntu-latest
+
+    # For the issue_comment trigger, only run when:
+    #   1. The comment is on a pull request (not a plain issue)
+    #   2. The comment body contains "@claude review"
+    if: |
+      github.event_name == 'pull_request' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null &&
+        contains(github.event.comment.body, '@claude review')
+      )
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so the action can diff correctly
+          fetch-depth: 0
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_BEDROCK_REGION }}
+          # No access keys stored — GitHub's OIDC token is exchanged for
+          # short-lived AWS credentials at runtime.
+
+      - name: Run Claude PR review
+        uses: anthropics/claude-code-action@v1
+        with:
+          use_bedrock: "true"
+          model: ${{ secrets.AWS_BEDROCK_MODEL_ID }}
+
+          # Tell Claude to apply every rule in CLAUDE.md and post the
+          # structured comment format defined there.
+          direct_prompt: |
+            You are performing a pull request review for the IGS mobile platform.
+
+            Read the CLAUDE.md file at the root of this repository.
+            It defines the exact rules you must enforce and the exact comment
+            format you must use.
+
+            Review every file changed in this pull request against those rules.
+            Then post a single review comment using the format specified in
+            CLAUDE.md — Blocks section first, Suggestions section second,
+            Summary last.
+
+            After posting the comment:
+            - If there are zero blocking violations (B1–B10): add the label
+              "claude-approved" and remove "needs-changes" if it exists.
+            - If there is one or more blocking violations: add the label
+              "needs-changes" and remove "claude-approved" if it exists.
+
+          # Expose the GitHub token so the action can post comments and
+          # manage labels on the PR.
+          github_token: ${{ secrets.GITHUB_TOKEN }}

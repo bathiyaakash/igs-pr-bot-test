@@ -1,0 +1,19 @@
+{
+  "name": "igs-pr-bot-test",
+  "version": "1.0.0",
+  "description": "Test repo for IGS PR Review Bot",
+  "scripts": {
+    "start": "react-native start",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "react": "18.2.0",
+    "react-native": "0.73.0",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0"
+  }
+}
