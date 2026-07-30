@@ -1,22 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList } from 'react-native';
-import { fetchJobs } from '../api/services/job-service';
-import { Job } from '../types/job.types';
+import React from 'react'
+import { View, Text } from 'react-native'
+import { useJobList } from '../hooks/use-job-list'
 
-export default function JobListScreen() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-
-  useEffect(() => {
-    fetchJobs().then(res => setJobs(res.jobs));
-  }, []);
-
+export function JobListScreen() {
+  const { jobs, isLoading } = useJobList()
+  if (isLoading) return <Text>Loading...</Text>
   return (
     <View>
-      <FlatList
-        data={jobs}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => <Text>{item.title}</Text>}
-      />
+      {jobs.map(job => <Text key={job.id}>{job.title}</Text>)}
     </View>
-  );
+  )
 }
